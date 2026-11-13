@@ -9,5 +9,5 @@ rl.question("", (v) => {
   const text = fs.existsSync(file) ? fs.readFileSync(file, "utf8") : "";
   const re = new RegExp(`^${name}=.*$`, "m");
   fs.writeFileSync(file, re.test(text) ? text.replace(re, () => `${name}=${v.trim()}`) : text + `\n${name}=${v.trim()}\n`);
-  console.log(`${name} saved (${v.trim() ? "set" : "empty"}).`);
+  console.log(`${name} saved (${v.trim() ? `set, ${v.trim().length} characters` : "EMPTY - nothing was pasted, try again"}).`);
 });

@@ -7,6 +7,22 @@ import type { Store } from "./types";
 type Db = { config: BotConfig | null; alerts: AlertRecord[]; meta: Record<string, unknown> };
 
 /**
+ * On Windows a file another process (or antivirus) has open briefly fails
+ * rename/read with EPERM, EBUSY or EACCES. Retry for up to ~2 s.
+ */
+async function retryBusy<T>(fn: () => Promise<T>): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await fn();
+    } catch (e) {
+      const code = (e as NodeJS.ErrnoException).code;
+      if (attempt >= 20 || !(code === "EPERM" || code === "EBUSY" || code === "EACCES")) throw e;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+  }
+}
+
+/**
  * JSON file store for a single always-on machine (local PC, VPS) running
  * `npm start` + `npm run worker`. Not for Vercel: its file system is not persistent.
  * Writes are serialized in-process and replaced atomically (write + rename).
@@ -22,7 +38,7 @@ export class FileStore implements Store {
 
   private async read(): Promise<Db> {
     try {
-      return JSON.parse(await fs.readFile(this.file, "utf8")) as Db;
+      return JSON.parse(await retryBusy(() => fs.readFile(this.file, "utf8"))) as Db;
     } catch (e) {
       if ((e as NodeJS.ErrnoException).code === "ENOENT") return { config: null, alerts: [], meta: {} };
       throw e;
@@ -33,7 +49,7 @@ export class FileStore implements Store {
     await fs.mkdir(path.dirname(this.file), { recursive: true });
     const tmp = `${this.file}.${process.pid}.${Date.now()}.tmp`;
     await fs.writeFile(tmp, JSON.stringify(db, null, 2));
-    await fs.rename(tmp, this.file);
+    await retryBusy(() => fs.rename(tmp, this.file));
   }
 
   /** Cross-process lock (the web server and the worker share the file). */

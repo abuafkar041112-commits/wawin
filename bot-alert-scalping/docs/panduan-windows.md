@@ -21,6 +21,8 @@ npm install
 Tidak perlu langkah terpisah: `jalankan-bot.bat` mengecek sendiri. `SESSION_SECRET` dibuat otomatis, dan jika `DASHBOARD_PASSWORD` kosong kamu diminta mengetiknya dua kali (tidak tampil di layar; minimal 8 karakter, tanpa `$`).
 Cek manual kapan saja: `node ..\tools\setup_login.mjs .env.local --check`
 
+**Lupa password atau muncul "Password salah"?** Tutup kedua jendela bot, dobel-klik `web\ganti-password.bat`, ketik password baru dua kali, lalu dobel-klik `jalankan-bot.bat` lagi. Pakai huruf dan angka (boleh `! @ % - _ .`); `$ # tanda kutip \ spasi` ditolak karena bisa berubah saat dibaca server.
+
 ## 4. Jalankan
 Dobel-klik **`web\jalankan-bot.bat`**. Dua jendela terbuka (Dashboard dan Worker) dan browser membuka http://localhost:3000. Jangan tutup kedua jendela itu.
 Jika Windows Firewall bertanya, klik **Cancel** atau izinkan hanya **Private network**: dashboard cukup dibuka dari laptop sendiri.

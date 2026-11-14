@@ -1,6 +1,8 @@
 "use server";
 
 import { createHash, timingSafeEqual } from "node:crypto";
+import { existsSync } from "node:fs";
+import path from "node:path";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -17,8 +19,21 @@ const digest = (s: string) => createHash("sha256").update(s).digest();
 
 export async function loginAction(_prev: ActionState, form: FormData): Promise<ActionState> {
   const expected = process.env.DASHBOARD_PASSWORD;
-  if (!expected || expected.length < 8 || !process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 32)
-    return { ok: false, message: "Server belum disetel: isi DASHBOARD_PASSWORD (8+ karakter) dan SESSION_SECRET (32+ karakter)." };
+  const secret = process.env.SESSION_SECRET;
+  const problems: string[] = [];
+  if (!expected) problems.push("DASHBOARD_PASSWORD tidak terbaca");
+  else if (expected.length < 8) problems.push(`DASHBOARD_PASSWORD hanya ${expected.length} karakter (min 8)`);
+  if (!secret) problems.push("SESSION_SECRET tidak terbaca");
+  else if (secret.length < 32) problems.push(`SESSION_SECRET hanya ${secret.length} karakter (min 32)`);
+  if (problems.length || !expected) {
+    // Details go to the server window only, never to the visitor.
+    const envFile = path.join(process.cwd(), ".env.local");
+    console.error(`[login] ${problems.join("; ")}. Folder server: ${process.cwd()} · .env.local ${existsSync(envFile) ? "ada" : "TIDAK ADA"} di folder itu.`);
+    return {
+      ok: false,
+      message: `Server belum disetel: ${problems.join("; ")}. Jalankan ulang jalankan-bot.bat (ia akan memperbaiki ini), atau lihat jendela Dashboard.`,
+    };
+  }
 
   const given = String(form.get("password") ?? "");
   if (!timingSafeEqual(digest(given), digest(expected))) {
